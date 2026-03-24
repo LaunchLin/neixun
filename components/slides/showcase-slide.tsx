@@ -97,36 +97,36 @@ function VerticalVideoPlayer({ videoUrl }: { videoUrl: string }) {
     <div className="flex h-full min-h-0 w-full items-center justify-center">
       {/* 手机框：先吃满父级高度（不超过 82dvh），宽度由 10:19.5 与 max-w 约束 */}
       <div
-        className="relative flex h-full max-h-[min(82dvh,920px)] w-auto min-w-0 max-w-[min(480px,46vw)] shrink-0 flex-col rounded-[3rem] bg-gradient-to-b from-[#1E293B] to-[#0F172A] p-2 sm:p-3 [aspect-ratio:10/19.5]"
+        className="relative flex h-full max-h-[min(82dvh,920px)] w-auto min-w-0 max-w-[min(480px,46vw)] shrink-0 flex-col overflow-hidden rounded-[3rem] bg-gradient-to-b from-[#1E293B] to-[#0F172A] p-2 sm:p-3 [aspect-ratio:10/19.5]"
         style={{
           boxShadow: "0 0 60px rgba(34, 211, 238, 0.15), 0 0 100px rgba(168, 85, 247, 0.1), inset 0 1px 1px rgba(255,255,255,0.1)",
           border: "1px solid rgba(255,255,255,0.1)",
         }}
       >
-        {/* Notch */}
-        <div className="absolute top-4 left-1/2 z-20 h-6 w-20 -translate-x-1/2 rounded-full bg-[#0B0F19] sm:top-5 sm:h-7 sm:w-24" />
-
-        {/* Screen：按视频比例在可视区内取最大内接矩形 */}
+        {/* 内屏：圆角裁切 + overflow-hidden，让视频边缘与手机框内轮廓一致，不再“浮在框上” */}
         <div
-          className="relative flex min-h-0 flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-[2.25rem] group video-player-container sm:rounded-[2.5rem]"
+          className="relative isolate flex min-h-0 flex-1 cursor-pointer flex-col overflow-hidden rounded-[2.35rem] border border-white/5 bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] group video-player-container sm:rounded-[2.55rem]"
           onMouseEnter={() => setShowControls(true)}
           onMouseLeave={() => setShowControls(false)}
           onClick={handleContainerClick}
           data-no-advance
-          style={{
-            background: "#0B0F19",
-          }}
         >
+          {/* 录屏自带状态栏/灵动岛，不再叠一层装饰刘海，避免“双层岛”错位 */}
+
           <video
             ref={videoRef}
-            className="bg-black"
-            style={{ width: "100%", height: "100%", objectFit: "contain" }}
-              src={videoUrl}
-              muted={isMuted}
-              playsInline
-              preload="metadata"
-              data-no-advance
-            />
+            className="absolute inset-0 z-0 block h-full w-full rounded-[2.35rem] bg-black sm:rounded-[2.55rem]"
+            style={{
+              /* contain：完整显示录屏（含状态栏）；cover 会裁切上下/左右 */
+              objectFit: "contain",
+              objectPosition: "center center",
+            }}
+            src={videoUrl}
+            muted={isMuted}
+            playsInline
+            preload="metadata"
+            data-no-advance
+          />
 
           <AnimatePresence>
             {showOverlay && !hasEnded && (
@@ -233,7 +233,7 @@ export function ShowcaseSlide() {
         {/* Title */}
         <StepElement step={1} animation="fadeUp" className="mb-3 flex-shrink-0 md:mb-5">
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold">
-            <span className="gradient-text">「字游」的加减法</span>
+            <span className="gradient-text">「字游」的可能性</span>
           </h2>
         </StepElement>
 

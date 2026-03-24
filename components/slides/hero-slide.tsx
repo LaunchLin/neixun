@@ -2,7 +2,6 @@
 
 import { StepElement } from "@/components/presentation/step-element"
 import { usePresentation } from "@/components/presentation/presentation-context"
-import { motion } from "framer-motion"
 
 // Steps: 1=quote, 2=strikethrough, 3=main headline
 export const HERO_STEPS = 3
@@ -43,26 +42,6 @@ export function HeroSlide() {
               No, talk IS the code.
             </span>
           </h1>
-        </StepElement>
-
-        {/* Continue hint - shows after all steps */}
-        <StepElement step={3} animation="fade" delay={0.8}>
-          <motion.div
-            className="mt-20 flex flex-col items-center gap-2"
-            animate={{ opacity: [0.3, 0.6, 0.3] }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <div className="w-6 h-10 rounded-full border-2 border-[#94A3B8]/20 flex items-start justify-center p-2">
-              <motion.div 
-                className="w-1 h-2 rounded-full bg-[#22D3EE]/60"
-                animate={{ y: [0, 8, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-              />
-            </div>
-            <span className="text-[#94A3B8]/30 text-xs font-mono uppercase tracking-widest">
-              点击继续
-            </span>
-          </motion.div>
         </StepElement>
       </div>
     </div>

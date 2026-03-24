@@ -1,13 +1,24 @@
 /**
- * 演示视频与扫码图：文件放在 public/videos/，路径以 /videos/ 开头。
+ * 演示视频与扫码图：
+ * - 视频文件名固定为下面这些（需要保持与 public/videos/ 同名）。
+ * - 本地开发：直接从 `/videos/*.mp4` 加载。
+ * - 正式分享：你可以上传 mp4 到公开的 CDN/对象存储，并设置 `NEXT_PUBLIC_VIDEOS_BASE_URL`
+ *   为“视频目录”前缀（例如 `https://xxx.com/videos` 或 `https://storage.googleapis.com/<bucket>/videos`）。
  */
+const VIDEOS_BASE_URL = process.env.NEXT_PUBLIC_VIDEOS_BASE_URL?.replace(/\/$/, "")
+
+function videoUrl(file: string) {
+  if (VIDEOS_BASE_URL) return `${VIDEOS_BASE_URL}/${file}`
+  return `/videos/${file}`
+}
+
 export const presentationVideos = {
-  demoGemini: "/videos/demo-gemini.mp4",
-  demoV0: "/videos/demo-v0.mp4",
-  demoSupabase: "/videos/demo-supabase.mp4",
-  demoCursor: "/videos/demo-cursor.mp4",
-  demoGithubVercel: "/videos/demo-github-vercel.mp4",
-  showcaseLeft: "/videos/showcase-left.mp4",
-  showcaseRight: "/videos/showcase-right.mp4",
+  demoGemini: videoUrl("demo-gemini.mp4"),
+  demoV0: videoUrl("demo-v0.mp4"),
+  demoSupabase: videoUrl("demo-supabase.mp4"),
+  demoCursor: videoUrl("demo-cursor.mp4"),
+  demoGithubVercel: videoUrl("demo-github-vercel.mp4"),
+  showcaseLeft: videoUrl("showcase-left.mp4"),
+  showcaseRight: videoUrl("showcase-right.mp4"),
   vercelQrApp: "/videos/qr-app.png",
 } as const

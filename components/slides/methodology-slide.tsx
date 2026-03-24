@@ -11,8 +11,8 @@ export function MethodologySlide() {
       color: "#22D3EE"
     },
     {
-      icon: Target,
-      content: "做事变得更容易了，不做什么比做什么更重要",
+      icon: Rocket,
+      content: "先完成再完美，快速验证比极致体验更重要",
       color: "#A855F7"
     },
     {
@@ -21,8 +21,8 @@ export function MethodologySlide() {
       color: "#22D3EE"
     },
     {
-      icon: Rocket,
-      content: "先完成再完美，快速验证比极致体验更重要",
+      icon: Target,
+      content: "做事变得更容易了，不做什么比做什么更重要",
       color: "#A855F7"
     }
   ]

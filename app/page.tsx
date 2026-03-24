@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import { PresentationProvider, usePresentation } from "@/components/presentation/presentation-context"
 import { Slide } from "@/components/presentation/slide"
 import { HeroSlide } from "@/components/slides/hero-slide"
@@ -11,6 +12,7 @@ import { ShowcaseSlide } from "@/components/slides/showcase-slide"
 import { ThanksSlide } from "@/components/slides/thanks-slide"
 import { AnimatePresence, motion } from "framer-motion"
 import { FullscreenButton } from "@/components/presentation/fullscreen-button"
+import { SlideLocator } from "@/components/presentation/slide-locator"
 
 // Slide configuration: each slide has an ID and number of internal steps
 // 使用 as const 确保类型稳定
@@ -19,13 +21,34 @@ const SLIDE_CONFIGS = [
   { id: "process", totalSteps: 7 },      // Title + 6 tools
   { id: "demo", totalSteps: 28 },        // Gemini prompts + videos + tips one by one
   { id: "meaning", totalSteps: 3 },      // Title + 2 cards
-  { id: "showcase", totalSteps: 3 },     // Title + 2 videos
+  { id: "showcase", totalSteps: 3 },     // 「字游」的可能性 + 2 videos
   { id: "methodology", totalSteps: 5 },  // Title + 4 panels (产品观，倒数第二页)
   { id: "thanks", totalSteps: 1 },       // Thanks only
 ] as const
 
 function PresentationContent() {
   const { currentSlide } = usePresentation()
+
+  const [locatorOpen, setLocatorOpen] = useState(false)
+  const lastOpenRef = useRef(false)
+
+  useEffect(() => {
+    // 只在“有精细指针”（鼠标）时启用，避免触摸设备弹出
+    const canHover = window.matchMedia?.("(pointer: fine)")?.matches ?? false
+    if (!canHover) return
+
+    const threshold = 72 // 右侧多少像素区域内显示
+
+    const onMove = (e: MouseEvent) => {
+      const shouldOpen = e.clientX >= window.innerWidth - threshold
+      if (shouldOpen === lastOpenRef.current) return
+      lastOpenRef.current = shouldOpen
+      setLocatorOpen(shouldOpen)
+    }
+
+    window.addEventListener("mousemove", onMove, { passive: true })
+    return () => window.removeEventListener("mousemove", onMove)
+  }, [])
 
   const slides = [
     <HeroSlide key="hero" />,
@@ -67,6 +90,20 @@ function PresentationContent() {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Right side quick page locator (默认不显示，鼠标移到右侧显示) */}
+      <SlideLocator
+        open={locatorOpen}
+        items={[
+          { id: "hero", label: "首页" },
+          { id: "process", label: "流程" },
+          { id: "demo", label: "演示" },
+          { id: "meaning", label: "含义" },
+          { id: "showcase", label: "字游" },
+          { id: "methodology", label: "产品观" },
+          { id: "thanks", label: "感谢" },
+        ]}
+      />
 
       {/* Fullscreen toggle only */}
       <FullscreenButton />

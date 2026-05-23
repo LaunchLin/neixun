@@ -18,6 +18,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
 import { presentationVideos } from "@/lib/presentation-videos"
+import { cn } from "@/lib/utils"
 
 // Gemini prompt text lines to show before video
 const geminiPromptLines = [
@@ -388,11 +389,16 @@ export function DemoSlide() {
   const activeTool = toolSections[state.toolIndex]
   const videoOnly = state.showVideo && !state.showTips && !state.showQr
 
+  const isGeminiPrompt = state.phase === "gemini-prompt"
+
   return (
     <div
-      className={`w-full h-full min-h-0 flex flex-col items-center justify-center ${
-        videoOnly ? "px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4" : "px-6 md:px-12 py-6"
-      }`}
+      className={cn(
+        "flex h-full min-h-0 w-full flex-col items-center justify-center",
+        videoOnly && "px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4",
+        isGeminiPrompt && "px-3 py-3 sm:px-5 sm:py-4 md:px-8 md:py-5",
+        !videoOnly && !isGeminiPrompt && "px-6 py-6 md:px-12"
+      )}
     >
       {/* Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -404,9 +410,14 @@ export function DemoSlide() {
         className={`relative z-10 w-full h-full min-h-0 flex flex-col ${videoOnly ? "max-w-[min(100%,1920px)]" : "max-w-7xl"}`}
       >
         {/* Minimal tool badge */}
-        <div className={`flex flex-shrink-0 items-center gap-3 ${videoOnly ? "mb-2" : "mb-4"}`}>
+        <div
+          className={cn(
+            "flex flex-shrink-0 items-center gap-2 sm:gap-3",
+            videoOnly ? "mb-2" : isGeminiPrompt ? "mb-2 sm:mb-3" : "mb-4"
+          )}
+        >
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
             style={{
               background: `linear-gradient(135deg, ${activeTool.color}20, ${activeTool.color}05)`,
               border: `1px solid ${activeTool.color}40`,
@@ -414,7 +425,10 @@ export function DemoSlide() {
           >
             <activeTool.icon className="w-5 h-5" style={{ color: activeTool.color }} />
           </div>
-          <h3 className="text-2xl font-bold" style={{ color: activeTool.color }}>
+          <h3
+            className="text-lg font-bold sm:text-xl md:text-2xl"
+            style={{ color: activeTool.color }}
+          >
             {activeTool.tool}
           </h3>
         </div>
@@ -432,13 +446,13 @@ export function DemoSlide() {
                 transition={{ duration: 0.4 }}
                 className="h-full flex flex-col"
               >
-                <div 
-                  className="flex-1 glass-card rounded-xl p-8 md:p-12 overflow-y-auto flex items-center"
+                <div
+                  className="glass-card min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl p-4 sm:p-6 md:p-8 lg:p-12"
                   style={{
                     border: `1px solid ${activeTool.color}30`,
                   }}
                 >
-                  <div className="space-y-6 text-left w-full">
+                  <div className="w-full min-w-0 space-y-3 text-left sm:space-y-4 md:space-y-6">
                     {geminiPromptLines.map((line, index) => (
                       <motion.div
                         key={index}
@@ -448,10 +462,10 @@ export function DemoSlide() {
                           y: state.promptLine > index ? 0 : 20,
                         }}
                         transition={{ duration: 0.4 }}
-                        className={`text-xl md:text-2xl lg:text-3xl leading-relaxed whitespace-pre-wrap font-medium transition-colors duration-300`}
-                        style={{
-                          color: state.promptLine === index + 1 ? '#E8EDF5' : '#64748B'
-                        }}
+                        className={cn(
+                          "break-words text-[clamp(0.8125rem,2.2vw+0.45rem,1.75rem)] leading-snug font-medium whitespace-pre-wrap transition-colors duration-300 sm:leading-relaxed",
+                          state.promptLine === index + 1 ? "text-[#E8EDF5]" : "text-[#64748B]"
+                        )}
                       >
                         {line}
                       </motion.div>

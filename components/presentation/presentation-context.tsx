@@ -9,6 +9,66 @@ export function markPreventAdvance() {
   preventNextAdvance = true
 }
 
+type VideoKeyboardToggleHandler = () => void
+const videoKeyboardToggles = new Map<symbol, VideoKeyboardToggleHandler>()
+let activeVideoKeyboardToggleId: symbol | null = null
+
+export function registerVideoKeyboardToggle(id: symbol, handler: VideoKeyboardToggleHandler) {
+  videoKeyboardToggles.set(id, handler)
+}
+
+export function unregisterVideoKeyboardToggle(id: symbol) {
+  videoKeyboardToggles.delete(id)
+  if (activeVideoKeyboardToggleId === id) {
+    activeVideoKeyboardToggleId = null
+  }
+}
+
+export function activateVideoKeyboardToggle(id: symbol) {
+  if (videoKeyboardToggles.has(id)) {
+    activeVideoKeyboardToggleId = id
+  }
+}
+
+function invokeVideoKeyboardToggle(): boolean {
+  if (activeVideoKeyboardToggleId !== null) {
+    const handler = videoKeyboardToggles.get(activeVideoKeyboardToggleId)
+    if (handler) {
+      handler()
+      return true
+    }
+  }
+
+  if (videoKeyboardToggles.size === 1) {
+    videoKeyboardToggles.values().next().value?.()
+    return true
+  }
+
+  return false
+}
+
+export function useVideoKeyboardToggle(togglePlay: () => void) {
+  const toggleRef = useRef(togglePlay)
+  toggleRef.current = togglePlay
+  const idRef = useRef<symbol | null>(null)
+  if (!idRef.current) {
+    idRef.current = Symbol("video-keyboard-toggle")
+  }
+
+  useEffect(() => {
+    const id = idRef.current!
+    registerVideoKeyboardToggle(id, () => {
+      markPreventAdvance()
+      toggleRef.current()
+    })
+    return () => unregisterVideoKeyboardToggle(id)
+  }, [])
+
+  return useCallback(() => {
+    activateVideoKeyboardToggle(idRef.current!)
+  }, [])
+}
+
 interface SlideConfig {
   id: string
   totalSteps: number
@@ -150,7 +210,14 @@ export function PresentationProvider({ children, slideConfigs }: PresentationPro
       const target = e.target as HTMLElement
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
       
-      if (e.key === " " || e.key === "ArrowRight" || e.key === "Enter" || e.key === "ArrowDown") {
+      if (e.key === " ") {
+        e.preventDefault()
+        markPreventAdvance()
+        invokeVideoKeyboardToggle()
+        return
+      }
+
+      if (e.key === "ArrowRight" || e.key === "Enter" || e.key === "ArrowDown") {
         e.preventDefault()
         advance()
       } else if (e.key === "ArrowLeft" || e.key === "Backspace" || e.key === "ArrowUp") {
@@ -166,6 +233,18 @@ export function PresentationProvider({ children, slideConfigs }: PresentationPro
     }
 
     const handleWheel = (e: WheelEvent) => {
+      let el = e.target as HTMLElement | null
+      while (el) {
+        const canScroll = el.scrollHeight > el.clientHeight + 1
+        if (canScroll) {
+          const atTop = el.scrollTop <= 0
+          const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1
+          if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
+            return
+          }
+        }
+        el = el.parentElement
+      }
       e.preventDefault()
     }
 

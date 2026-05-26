@@ -17,7 +17,7 @@ import { SlideLocator } from "@/components/presentation/slide-locator"
 // Slide configuration: each slide has an ID and number of internal steps
 // 使用 as const 确保类型稳定
 const SLIDE_CONFIGS = [
-  { id: "hero", totalSteps: 3 },         // Quote, strikethrough, headline
+  { id: "hero", totalSteps: 3 },         // Typewriter quote, static quote, strikethrough + headline
   { id: "process", totalSteps: 7 },      // Title + 6 tools
   { id: "demo", totalSteps: 28 },        // Gemini prompts + videos + tips one by one
   { id: "meaning", totalSteps: 3 },      // Title + 2 cards
@@ -82,7 +82,7 @@ function PresentationContent() {
               duration: 0.6,
               ease: [0.22, 1, 0.36, 1]
             }}
-            className="absolute inset-0"
+            className="absolute inset-0 flex min-h-0 flex-col"
           >
             <Slide slideIndex={currentSlide}>
               {slides[currentSlide]}

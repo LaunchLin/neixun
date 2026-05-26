@@ -2,12 +2,54 @@
 
 import { StepElement } from "@/components/presentation/step-element"
 import { usePresentation } from "@/components/presentation/presentation-context"
+import { useEffect, useState } from "react"
 
-// Steps: 1=quote, 2=strikethrough, 3=main headline
+// Steps: 1=typewriter quote, 2=static quote, 3=strikethrough + main headline
 export const HERO_STEPS = 3
 
+const FULL_QUOTE = '"Talk is cheap.\nShow me the code."'
+const TYPE_MS = 110 // 0.5× speed (was 55ms)
+const PAUSE_MS = 4000
+
 export function HeroSlide() {
-  const { isStepVisible } = usePresentation()
+  const { isStepVisible, currentStep } = usePresentation()
+  const isTyping = currentStep === 1
+  const showFinal = isStepVisible(3)
+  const [typedLength, setTypedLength] = useState(0)
+
+  useEffect(() => {
+    if (!isTyping) {
+      if (currentStep >= 2) {
+        setTypedLength(FULL_QUOTE.length)
+      }
+      return
+    }
+
+    let index = 0
+    let timeoutId: ReturnType<typeof setTimeout>
+
+    const tick = () => {
+      if (index < FULL_QUOTE.length) {
+        index += 1
+        setTypedLength(index)
+        timeoutId = setTimeout(tick, TYPE_MS)
+      } else {
+        timeoutId = setTimeout(() => {
+          index = 0
+          setTypedLength(0)
+          timeoutId = setTimeout(tick, TYPE_MS)
+        }, PAUSE_MS)
+      }
+    }
+
+    setTypedLength(0)
+    timeoutId = setTimeout(tick, TYPE_MS)
+
+    return () => clearTimeout(timeoutId)
+  }, [isTyping, currentStep])
+
+  const displayedText = isTyping ? FULL_QUOTE.slice(0, typedLength) : FULL_QUOTE
+  const lines = displayedText.split("\n")
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center px-8 md:px-16">
@@ -18,24 +60,30 @@ export function HeroSlide() {
       </div>
 
       <div className="relative z-10 text-center max-w-6xl">
-        {/* Step 1: Original quote - made much larger */}
         <StepElement step={1} animation="fadeUp" className="mb-16">
           <p className="text-3xl md:text-5xl lg:text-7xl text-[#94A3B8]/70 font-mono leading-tight">
-            <span 
+            <span
               className={`transition-all duration-700 ${
-                isStepVisible(2) 
-                  ? "line-through decoration-[#EF4444]/70 decoration-4 text-[#94A3B8]/30" 
+                showFinal
+                  ? "line-through decoration-[#EF4444]/70 decoration-4 text-[#94A3B8]/30"
                   : ""
               }`}
             >
-              {'"Talk is cheap.'}
-              <br />
-              {'Show me the code."'}
+              {lines.map((line, index) => (
+                <span key={index}>
+                  {index > 0 && <br />}
+                  {line}
+                </span>
+              ))}
+              {isTyping && (
+                <span className="ml-0.5 inline-block w-[0.05em] animate-pulse text-[#22D3EE]">
+                  |
+                </span>
+              )}
             </span>
           </p>
         </StepElement>
 
-        {/* Step 3: Main headline with glow */}
         <StepElement step={3} animation="scale" className="mb-10">
           <h1 className="text-5xl md:text-7xl lg:text-9xl font-bold tracking-tight leading-none">
             <span className="gradient-text text-glow-cyan">

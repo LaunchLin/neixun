@@ -1,7 +1,7 @@
 "use client"
 
 import { StepElement } from "@/components/presentation/step-element"
-import { usePresentation, markPreventAdvance } from "@/components/presentation/presentation-context"
+import { usePresentation, markPreventAdvance, useVideoKeyboardToggle } from "@/components/presentation/presentation-context"
 import { 
   Sparkles, 
   Palette, 
@@ -16,7 +16,7 @@ import {
   type LucideIcon
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { presentationVideos } from "@/lib/presentation-videos"
 import { cn } from "@/lib/utils"
 
@@ -37,7 +37,6 @@ interface ToolSection {
   color: string
   videoUrl: string
   tips: string[]
-  hasQrCode?: boolean
   hasPromptIntro?: boolean
   skipTips?: boolean
 }
@@ -50,12 +49,11 @@ const toolSections: ToolSection[] = [
     color: "#A855F7",
     videoUrl: presentationVideos.demoGemini,
     tips: [
-      "让AI简单了解你的技术能力，制定最适合你的沟通方式",
-      "让AI知道你为什么要做这样一个APP，了解动机更不容易跑偏",
-      "列举功能的基本方法：增删查改大差不差",
-      "用苏格拉底式的提问，减轻AI幻觉",
-      "让AI输出自己的理解，确认后再动手",
-      "带着AI走，不要让AI带着走"
+      "让AI简单了解你，制定最适合你的沟通方式",
+      "让AI知道你为什么要做这样的事情，了解动机更不容易跑偏，还能帮你完善功能",
+      "列举功能给AI，增删差改就差不了",
+      "让AI用苏格拉底式的提问采访你，减少幻觉",
+      "需求逻辑确认的越详细越好，增加准确性，提高效率",
     ],
     hasPromptIntro: true,
   },
@@ -66,13 +64,14 @@ const toolSections: ToolSection[] = [
     color: "#22D3EE",
     videoUrl: presentationVideos.demoV0,
     tips: [
-      "v0是会员+余额制，根据每次任务难度消耗不同余额，不同等级会员价格不同，每个月赠送不同余额",
-      "比起文字提示词，AI更擅长模仿图片",
-      "先跑通核心流程和页面，再打磨细节",
-      "修改意见尽可能一次性说完，既节省余额又提高代码稳定性",
-      "量化自己的描述：例如放大1.5倍而不是放大一点",
+      "v0和大多数AI一样，是会员+余额制，会员每月赠送余额，任务消耗余额",
+      "比起通过文字理解风格，AI更擅长从图片模仿风格，这可以降低抽卡失败率",
+      "大多数人没有能力去通过沟通来调整第一眼就不满意的视觉方案，重新抽卡最简单",
+      "先跑通核心页面和流程，再打磨细节",
+      "修改意见尽可能一次性说完，即节省余额又提高代码稳定性",
+      "在提意见的时候，尽可能让自己描述的更精准，例如放大1.5倍而不是放大一点",
       "有设计能力的同学可以联动figma制作出更符合心意的界面",
-      "v0的作品发布后可通过手机访问测试，可用于日常demo演示"
+      "日常工作可用v0制作简单demo，方便演示",
     ]
   },
   {
@@ -91,9 +90,10 @@ const toolSections: ToolSection[] = [
     color: "#22D3EE",
     videoUrl: presentationVideos.demoCursor,
     tips: [
-      "修改界面可以用v0先做，生成截图让cursor学习",
-      "AI降智，果断新开窗口",
-      "不懂就问，别自己瞎琢磨"
+      "不会的操作直接下指令让cursor完成，不要自己瞎琢磨",
+      "对话太长了，AI会降智，不要忍耐，直接新开窗口，强制重启他的大脑",
+      "要修改/新增功能的时候，如果cursor生成的界面不满意，让v0先做，截图发给cursor学习",
+      "对于效率有高要求的同学可以直接跳过v0，直接用cursor完成所有代码",
     ]
   },
   {
@@ -104,17 +104,16 @@ const toolSections: ToolSection[] = [
     videoUrl: presentationVideos.demoGithubVercel,
     tips: [],
     skipTips: true,
-    hasQrCode: true,
   },
 ]
 
 // Steps calculation:
-// Gemini: Steps 1-6 (6 prompt lines) + Step 7 (video) + Steps 8-13 (6 tips one by one) = 13 steps
-// v0: Step 14 (video) + Steps 15-21 (7 tips one by one) = 8 steps
+// Gemini: Steps 1-6 (6 prompt lines) + Step 7 (video) + Steps 8-12 (5 tips one by one) = 12 steps
+// v0: Step 13 (video) + Steps 14-21 (8 tips one by one) = 9 steps
 // Supabase: Step 22 (video only, no tips) = 1 step
-// Cursor: Step 23 (video) + Steps 24-26 (3 tips one by one) = 4 steps
-// GitHub+Vercel: Step 27 (video) + Step 28 (QR code) = 2 steps
-// Total: 13 + 8 + 1 + 4 + 2 = 28 steps
+// Cursor: Step 23 (video) + Steps 24-27 (4 tips one by one) = 5 steps
+// GitHub+Vercel: Step 28 (video only) = 1 step
+// Total: 12 + 9 + 1 + 5 + 1 = 28 steps
 export const DEMO_STEPS = 28
 
 function VideoPlayer({ videoUrl, isSmall }: { videoUrl: string; isSmall?: boolean }) {
@@ -126,21 +125,39 @@ function VideoPlayer({ videoUrl, isSmall }: { videoUrl: string; isSmall?: boolea
   const [showControls, setShowControls] = useState(false)
   const [hasEnded, setHasEnded] = useState(false)
 
-  const togglePlay = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    markPreventAdvance()
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause()
-      } else {
-        videoRef.current.play()
-        setShowOverlay(false)
-        setHasEnded(false)
-      }
-      setIsPlaying(!isPlaying)
+  const performTogglePlay = useCallback(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    if (hasEnded) {
+      video.currentTime = 0
+      setProgress(0)
+      setHasEnded(false)
+      void video.play()
+      setIsPlaying(true)
+      setShowOverlay(false)
+      return
     }
-  }
+
+    if (isPlaying) {
+      video.pause()
+      setIsPlaying(false)
+    } else {
+      void video.play()
+      setIsPlaying(true)
+      setShowOverlay(false)
+    }
+  }, [hasEnded, isPlaying])
+
+  const activateVideoKeyboard = useVideoKeyboardToggle(performTogglePlay)
+
+  const togglePlay = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    e?.preventDefault()
+    markPreventAdvance()
+    activateVideoKeyboard()
+    performTogglePlay()
+  }, [activateVideoKeyboard, performTogglePlay])
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -200,9 +217,11 @@ function VideoPlayer({ videoUrl, isSmall }: { videoUrl: string; isSmall?: boolea
     }
   }, [videoUrl])
 
-  const handleContainerClick = (e: React.MouseEvent) => {
+  const handleVideoAreaClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest(".video-controls")) return
     e.stopPropagation()
-    markPreventAdvance()
+    e.preventDefault()
+    togglePlay(e)
   }
 
   return (
@@ -215,9 +234,11 @@ function VideoPlayer({ videoUrl, isSmall }: { videoUrl: string; isSmall?: boolea
             : "0 0 60px rgba(34, 211, 238, 0.2), 0 0 120px rgba(168, 85, 247, 0.15)",
           border: "1px solid rgba(34, 211, 238, 0.3)",
         }}
-        onMouseEnter={() => setShowControls(true)}
+        onMouseEnter={() => {
+          setShowControls(true)
+          activateVideoKeyboard()
+        }}
         onMouseLeave={() => setShowControls(false)}
-        onClick={handleContainerClick}
         data-no-advance
       >
         {!isSmall && (
@@ -237,6 +258,16 @@ function VideoPlayer({ videoUrl, isSmall }: { videoUrl: string; isSmall?: boolea
           />
         </div>
 
+        {!showOverlay && (
+          <button
+            type="button"
+            aria-label={isPlaying ? "暂停" : "播放"}
+            className="absolute inset-0 z-20 cursor-pointer border-0 bg-transparent p-0"
+            onClick={handleVideoAreaClick}
+            data-no-advance
+          />
+        )}
+
       <AnimatePresence>
         {showOverlay && !hasEnded && (
           <motion.div
@@ -245,6 +276,7 @@ function VideoPlayer({ videoUrl, isSmall }: { videoUrl: string; isSmall?: boolea
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             className="absolute inset-0 z-20 bg-[#0B0F19]/55 backdrop-blur-sm flex items-center justify-center"
+            onClick={handleVideoAreaClick}
           >
             <motion.button
               initial={{ scale: 0.8, opacity: 0 }}
@@ -252,7 +284,10 @@ function VideoPlayer({ videoUrl, isSmall }: { videoUrl: string; isSmall?: boolea
               exit={{ scale: 0.8, opacity: 0 }}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
-              onClick={togglePlay}
+              onClick={(e) => {
+                e.stopPropagation()
+                togglePlay(e)
+              }}
               className={`relative flex items-center justify-center rounded-full no-advance ${isSmall ? 'w-12 h-12' : 'w-24 h-24'}`}
               style={{
                 background: "linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(168, 85, 247, 0.2))",
@@ -328,7 +363,7 @@ function VideoPlayer({ videoUrl, isSmall }: { videoUrl: string; isSmall?: boolea
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute top-3 right-3 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full"
+            className="pointer-events-none absolute top-3 right-3 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full"
             style={{ background: "rgba(11, 15, 25, 0.7)", backdropFilter: "blur(8px)", border: "1px solid rgba(34, 211, 238, 0.2)" }}
           >
             <span className="relative flex h-2 w-2">
@@ -348,55 +383,81 @@ export function DemoSlide() {
   const { currentStep } = usePresentation()
   
   // Calculate state based on step
-  // Gemini: Steps 1-6 = prompt lines, Step 7 = video, Steps 8-13 = tips (6 tips)
-  // v0: Step 14 = video, Steps 15-21 = tips (7 tips)
+  // Gemini: Steps 1-6 = prompt lines, Step 7 = video, Steps 8-12 = tips (5 tips)
+  // v0: Step 13 = video, Steps 14-21 = tips (8 tips)
   // Supabase: Step 22 = video only
-  // Cursor: Step 23 = video, Steps 24-26 = tips (3 tips)
-  // GitHub+Vercel: Step 27 = video, Step 28 = QR code
+  // Cursor: Step 23 = video, Steps 24-27 = tips (4 tips)
+  // GitHub+Vercel: Step 28 = video only
   
   const getState = () => {
     if (currentStep <= 6) {
-      return { phase: 'gemini-prompt' as const, toolIndex: 0, promptLine: currentStep, showVideo: false, showTips: false, visibleTips: 0, showQr: false }
+      return { phase: 'gemini-prompt' as const, toolIndex: 0, promptLine: currentStep, showVideo: false, showTips: false, visibleTips: 0 }
     }
     if (currentStep === 7) {
-      return { phase: 'gemini-video' as const, toolIndex: 0, promptLine: 6, showVideo: true, showTips: false, visibleTips: 0, showQr: false }
+      return { phase: 'gemini-video' as const, toolIndex: 0, promptLine: 6, showVideo: true, showTips: false, visibleTips: 0 }
     }
-    if (currentStep >= 8 && currentStep <= 13) {
-      return { phase: 'gemini-tips' as const, toolIndex: 0, promptLine: 6, showVideo: true, showTips: true, visibleTips: currentStep - 7, showQr: false }
+    if (currentStep >= 8 && currentStep <= 12) {
+      return { phase: 'gemini-tips' as const, toolIndex: 0, promptLine: 6, showVideo: true, showTips: true, visibleTips: currentStep - 7 }
     }
-    if (currentStep === 14) {
-      return { phase: 'v0-video' as const, toolIndex: 1, promptLine: 0, showVideo: true, showTips: false, visibleTips: 0, showQr: false }
+    if (currentStep === 13) {
+      return { phase: 'v0-video' as const, toolIndex: 1, promptLine: 0, showVideo: true, showTips: false, visibleTips: 0 }
     }
-    if (currentStep >= 15 && currentStep <= 21) {
-      return { phase: 'v0-tips' as const, toolIndex: 1, promptLine: 0, showVideo: true, showTips: true, visibleTips: currentStep - 14, showQr: false }
+    if (currentStep >= 14 && currentStep <= 21) {
+      return { phase: 'v0-tips' as const, toolIndex: 1, promptLine: 0, showVideo: true, showTips: true, visibleTips: currentStep - 13 }
     }
     if (currentStep === 22) {
-      return { phase: 'supabase-video' as const, toolIndex: 2, promptLine: 0, showVideo: true, showTips: false, visibleTips: 0, showQr: false }
+      return { phase: 'supabase-video' as const, toolIndex: 2, promptLine: 0, showVideo: true, showTips: false, visibleTips: 0 }
     }
     if (currentStep === 23) {
-      return { phase: 'cursor-video' as const, toolIndex: 3, promptLine: 0, showVideo: true, showTips: false, visibleTips: 0, showQr: false }
+      return { phase: 'cursor-video' as const, toolIndex: 3, promptLine: 0, showVideo: true, showTips: false, visibleTips: 0 }
     }
-    if (currentStep >= 24 && currentStep <= 26) {
-      return { phase: 'cursor-tips' as const, toolIndex: 3, promptLine: 0, showVideo: true, showTips: true, visibleTips: currentStep - 23, showQr: false }
+    if (currentStep >= 24 && currentStep <= 27) {
+      return { phase: 'cursor-tips' as const, toolIndex: 3, promptLine: 0, showVideo: true, showTips: true, visibleTips: currentStep - 23 }
     }
-    if (currentStep === 27) {
-      return { phase: 'vercel-video' as const, toolIndex: 4, promptLine: 0, showVideo: true, showTips: false, visibleTips: 0, showQr: false }
-    }
-    return { phase: 'vercel-qr' as const, toolIndex: 4, promptLine: 0, showVideo: true, showTips: false, visibleTips: 0, showQr: true }
+    return { phase: 'vercel-video' as const, toolIndex: 4, promptLine: 0, showVideo: true, showTips: false, visibleTips: 0 }
   }
   
   const state = getState()
   const activeTool = toolSections[state.toolIndex]
-  const videoOnly = state.showVideo && !state.showTips && !state.showQr
+  const videoOnly = state.showVideo && !state.showTips
 
   const isGeminiPrompt = state.phase === "gemini-prompt"
+  const promptScrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (state.phase !== "gemini-prompt") return
+    const container = promptScrollRef.current
+    if (!container) return
+
+    const scrollActiveLine = () => {
+      const activeLine = container.querySelector('[data-prompt-active="true"]') as HTMLElement | null
+      if (!activeLine) {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" })
+        return
+      }
+
+      const scrollPadding = 16
+      const containerRect = container.getBoundingClientRect()
+      const activeRect = activeLine.getBoundingClientRect()
+      const activeBottom = activeRect.bottom - containerRect.top + container.scrollTop
+      const targetTop = activeBottom - container.clientHeight + scrollPadding
+
+      container.scrollTo({
+        top: Math.max(0, targetTop),
+        behavior: "smooth",
+      })
+    }
+
+    requestAnimationFrame(scrollActiveLine)
+  }, [state.phase, state.promptLine])
 
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 w-full flex-col items-center justify-center",
+        "flex h-full min-h-0 w-full min-w-0 flex-col items-center overflow-hidden",
+        isGeminiPrompt ? "justify-start" : "justify-center",
         videoOnly && "px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4",
-        isGeminiPrompt && "px-3 py-3 sm:px-5 sm:py-4 md:px-8 md:py-5",
+        isGeminiPrompt && "px-2 py-1.5 sm:px-5 sm:py-3 md:px-8 md:py-4",
         !videoOnly && !isGeminiPrompt && "px-6 py-6 md:px-12"
       )}
     >
@@ -407,13 +468,16 @@ export function DemoSlide() {
       </div>
 
       <div
-        className={`relative z-10 w-full h-full min-h-0 flex flex-col ${videoOnly ? "max-w-[min(100%,1920px)]" : "max-w-7xl"}`}
+        className={cn(
+          "relative z-10 grid min-h-0 w-full min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)]",
+          videoOnly ? "max-w-[min(100%,1920px)]" : "max-w-7xl"
+        )}
       >
         {/* Minimal tool badge */}
         <div
           className={cn(
             "flex flex-shrink-0 items-center gap-2 sm:gap-3",
-            videoOnly ? "mb-2" : isGeminiPrompt ? "mb-2 sm:mb-3" : "mb-4"
+            videoOnly ? "mb-2" : isGeminiPrompt ? "mb-1.5 sm:mb-3" : "mb-4"
           )}
         >
           <div
@@ -434,7 +498,7 @@ export function DemoSlide() {
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 min-h-0">
+        <div className="relative h-full min-h-0 overflow-hidden">
           <AnimatePresence mode="wait">
             {/* Gemini Prompt Phase */}
             {state.phase === 'gemini-prompt' && (
@@ -444,32 +508,43 @@ export function DemoSlide() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.4 }}
-                className="h-full flex flex-col"
+                className="absolute inset-0 flex min-h-0 flex-col"
               >
                 <div
-                  className="glass-card min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl p-4 sm:p-6 md:p-8 lg:p-12"
+                  className="glass-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl"
                   style={{
                     border: `1px solid ${activeTool.color}30`,
                   }}
                 >
-                  <div className="w-full min-w-0 space-y-3 text-left sm:space-y-4 md:space-y-6">
-                    {geminiPromptLines.map((line, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ 
-                          opacity: state.promptLine > index ? (state.promptLine === index + 1 ? 1 : 0.35) : 0,
-                          y: state.promptLine > index ? 0 : 20,
-                        }}
-                        transition={{ duration: 0.4 }}
-                        className={cn(
-                          "break-words text-[clamp(0.8125rem,2.2vw+0.45rem,1.75rem)] leading-snug font-medium whitespace-pre-wrap transition-colors duration-300 sm:leading-relaxed",
-                          state.promptLine === index + 1 ? "text-[#E8EDF5]" : "text-[#64748B]"
-                        )}
-                      >
-                        {line}
-                      </motion.div>
-                    ))}
+                  <div
+                    ref={promptScrollRef}
+                    data-prompt-scroll
+                    className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 lg:px-8 lg:py-8"
+                    style={{ scrollPaddingBlock: "24px", WebkitOverflowScrolling: "touch" }}
+                  >
+                    <div className="w-full min-w-0 max-w-full space-y-2 pb-4 text-left sm:space-y-3 md:space-y-4 sm:pb-6">
+                      {geminiPromptLines.map((line, index) => {
+                        if (state.promptLine <= index) return null
+
+                        return (
+                          <motion.div
+                            key={index}
+                            data-prompt-active={state.promptLine === index + 1 ? "true" : undefined}
+                            initial={{ opacity: 0 }}
+                            animate={{
+                              opacity: state.promptLine === index + 1 ? 1 : 0.35,
+                            }}
+                            transition={{ duration: 0.4 }}
+                            className={cn(
+                              "max-w-full break-words [overflow-wrap:anywhere] text-base leading-relaxed font-medium whitespace-pre-wrap transition-colors duration-300 sm:text-lg md:text-xl lg:text-2xl",
+                              state.promptLine === index + 1 ? "text-[#E8EDF5]" : "text-[#64748B]"
+                            )}
+                          >
+                            {line}
+                          </motion.div>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -478,26 +553,26 @@ export function DemoSlide() {
             {/* Video Phase (all tools) */}
             {state.showVideo && (
               <motion.div
-                key={`tool-${state.toolIndex}-${state.showTips ? 'tips' : state.showQr ? 'qr' : 'video'}`}
+                key={`tool-${state.toolIndex}-${state.showTips ? 'tips' : 'video'}`}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.4 }}
-                className="flex h-full min-h-0 flex-col"
+                className="absolute inset-0 flex min-h-0 flex-col"
               >
                 <div className="flex min-h-0 flex-1 gap-3 transition-all duration-500 md:gap-4">
                   {/* Video area */}
                   <motion.div
                     className={`glass-card flex min-h-0 flex-col overflow-hidden rounded-xl ${
-                      state.showTips || state.showQr ? "p-1.5" : "p-0 sm:p-1"
+                      state.showTips ? "p-1.5" : "p-0 sm:p-1"
                     }`}
                     animate={{
-                      flex: state.showTips || state.showQr ? "0 0 30%" : "1 1 100%",
+                      flex: state.showTips ? "0 0 30%" : "1 1 100%",
                     }}
                     transition={{ duration: 0.5, ease: "easeInOut" }}
                   >
                     <div className="relative min-h-0 min-w-0 flex-1">
-                      <VideoPlayer videoUrl={activeTool.videoUrl} isSmall={state.showTips || state.showQr} />
+                      <VideoPlayer videoUrl={activeTool.videoUrl} isSmall={state.showTips} />
                     </div>
                   </motion.div>
 
@@ -543,38 +618,6 @@ export function DemoSlide() {
                             </motion.div>
                           ))}
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* QR Code area for Vercel */}
-                  <AnimatePresence>
-                    {state.showQr && (
-                      <motion.div
-                        initial={{ opacity: 0, x: 50, flex: '0 0 0%' }}
-                        animate={{ opacity: 1, x: 0, flex: '1 1 70%' }}
-                        exit={{ opacity: 0, x: 50, flex: '0 0 0%' }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                        className="glass-card rounded-xl p-8 md:p-12 flex flex-col items-center justify-center"
-                        style={{
-                          border: `1px solid ${activeTool.color}30`,
-                        }}
-                      >
-                        <div 
-                          className="w-64 h-64 rounded-2xl flex items-center justify-center relative overflow-hidden mb-8"
-                          style={{
-                            background: "linear-gradient(135deg, rgba(34, 211, 238, 0.1), rgba(168, 85, 247, 0.1))",
-                            border: "2px dashed rgba(34, 211, 238, 0.3)",
-                          }}
-                        >
-                          <img
-                            src={presentationVideos.vercelQrApp}
-                            alt="扫码体验运动打卡激励APP"
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                        <p className="text-3xl font-bold text-[#E8EDF5] mb-3">扫码体验</p>
-                        <p className="text-xl text-[#94A3B8]">运动打卡激励APP</p>
                       </motion.div>
                     )}
                   </AnimatePresence>

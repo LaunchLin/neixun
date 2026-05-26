@@ -1,10 +1,10 @@
 "use client"
 
 import { StepElement } from "@/components/presentation/step-element"
-import { markPreventAdvance } from "@/components/presentation/presentation-context"
+import { markPreventAdvance, useVideoKeyboardToggle } from "@/components/presentation/presentation-context"
 import { Play, Pause, Volume2, VolumeX, Maximize } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { presentationVideos } from "@/lib/presentation-videos"
 
 // Steps: 1=title, 2=video1, 3=video2
@@ -19,20 +19,39 @@ function VerticalVideoPlayer({ videoUrl }: { videoUrl: string }) {
   const [showControls, setShowControls] = useState(false)
   const [hasEnded, setHasEnded] = useState(false)
 
-  const togglePlay = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    markPreventAdvance()
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause()
-      } else {
-        videoRef.current.play()
-        setShowOverlay(false)
-        setHasEnded(false)
-      }
-      setIsPlaying(!isPlaying)
+  const performTogglePlay = useCallback(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    if (hasEnded) {
+      video.currentTime = 0
+      setProgress(0)
+      setHasEnded(false)
+      void video.play()
+      setIsPlaying(true)
+      setShowOverlay(false)
+      return
     }
-  }
+
+    if (isPlaying) {
+      video.pause()
+      setIsPlaying(false)
+    } else {
+      void video.play()
+      setIsPlaying(true)
+      setShowOverlay(false)
+    }
+  }, [hasEnded, isPlaying])
+
+  const activateVideoKeyboard = useVideoKeyboardToggle(performTogglePlay)
+
+  const togglePlay = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    e?.preventDefault()
+    markPreventAdvance()
+    activateVideoKeyboard()
+    performTogglePlay()
+  }, [activateVideoKeyboard, performTogglePlay])
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -88,9 +107,11 @@ function VerticalVideoPlayer({ videoUrl }: { videoUrl: string }) {
     videoRef.current?.load()
   }, [videoUrl])
 
-  const handleContainerClick = (e: React.MouseEvent) => {
+  const handleVideoAreaClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest(".video-controls")) return
     e.stopPropagation()
-    markPreventAdvance()
+    e.preventDefault()
+    togglePlay(e)
   }
 
   return (
@@ -106,9 +127,11 @@ function VerticalVideoPlayer({ videoUrl }: { videoUrl: string }) {
         {/* 内屏：圆角裁切 + overflow-hidden，让视频边缘与手机框内轮廓一致，不再“浮在框上” */}
         <div
           className="relative isolate flex min-h-0 flex-1 cursor-pointer flex-col overflow-hidden rounded-[2.35rem] border border-white/5 bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] group video-player-container sm:rounded-[2.55rem]"
-          onMouseEnter={() => setShowControls(true)}
+          onMouseEnter={() => {
+            setShowControls(true)
+            activateVideoKeyboard()
+          }}
           onMouseLeave={() => setShowControls(false)}
-          onClick={handleContainerClick}
           data-no-advance
         >
           {/* 录屏自带状态栏/灵动岛，不再叠一层装饰刘海，避免“双层岛”错位 */}
@@ -128,6 +151,16 @@ function VerticalVideoPlayer({ videoUrl }: { videoUrl: string }) {
             data-no-advance
           />
 
+          {!showOverlay && (
+            <button
+              type="button"
+              aria-label={isPlaying ? "暂停" : "播放"}
+              className="absolute inset-0 z-10 cursor-pointer border-0 bg-transparent p-0"
+              onClick={handleVideoAreaClick}
+              data-no-advance
+            />
+          )}
+
           <AnimatePresence>
             {showOverlay && !hasEnded && (
               <motion.div
@@ -136,6 +169,7 @@ function VerticalVideoPlayer({ videoUrl }: { videoUrl: string }) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
                 className="absolute inset-0 z-10 flex items-center justify-center bg-[#0B0F19]/60 backdrop-blur-sm"
+                onClick={handleVideoAreaClick}
               >
                 <motion.button
                   initial={{ scale: 0.8, opacity: 0 }}
@@ -143,7 +177,10 @@ function VerticalVideoPlayer({ videoUrl }: { videoUrl: string }) {
                   exit={{ scale: 0.8, opacity: 0 }}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={togglePlay}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    togglePlay(e)
+                  }}
                   className="relative flex items-center justify-center w-20 h-20 rounded-full no-advance"
                   style={{
                     background: "linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(168, 85, 247, 0.2))",
@@ -203,7 +240,7 @@ function VerticalVideoPlayer({ videoUrl }: { videoUrl: string }) {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                className="absolute top-12 right-3 z-20 flex items-center gap-2 px-2 py-1 rounded-full"
+                className="pointer-events-none absolute top-12 right-3 z-20 flex items-center gap-2 px-2 py-1 rounded-full"
                 style={{ background: "rgba(11, 15, 25, 0.7)", backdropFilter: "blur(8px)", border: "1px solid rgba(34, 211, 238, 0.2)" }}
               >
                 <span className="relative flex h-1.5 w-1.5">

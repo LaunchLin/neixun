@@ -20,7 +20,7 @@ const SLIDE_CONFIGS = [
   { id: "hero", totalSteps: 3 },         // Typewriter quote, static quote, strikethrough + headline
   { id: "process", totalSteps: 7 },      // Title + 6 tools
   { id: "demo", totalSteps: 28 },        // Gemini prompts + videos + tips one by one
-  { id: "meaning", totalSteps: 3 },      // Title + 2 cards
+  { id: "meaning", totalSteps: 4 },      // Title + 2 cards + bubbles
   { id: "showcase", totalSteps: 3 },     // 「字游」的可能性 + 2 videos
   { id: "methodology", totalSteps: 5 },  // Title + 4 panels (产品观，倒数第二页)
   { id: "thanks", totalSteps: 2 },       // Thanks + QR codes

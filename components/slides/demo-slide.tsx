@@ -16,7 +16,7 @@ import {
   type LucideIcon
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useState, useRef, useEffect, useCallback } from "react"
+import { Fragment, useState, useRef, useEffect, useCallback } from "react"
 import { presentationVideos } from "@/lib/presentation-videos"
 import { cn } from "@/lib/utils"
 
@@ -33,6 +33,8 @@ const geminiPromptLines = [
 interface ToolSection {
   id: number
   tool: string
+  mapLabel: string
+  role: string
   icon: LucideIcon
   color: string
   videoUrl: string
@@ -45,6 +47,8 @@ const toolSections: ToolSection[] = [
   {
     id: 1,
     tool: "Gemini",
+    mapLabel: "Gemini",
+    role: "全能助理",
     icon: Sparkles,
     color: "#A855F7",
     videoUrl: presentationVideos.demoGemini,
@@ -60,6 +64,8 @@ const toolSections: ToolSection[] = [
   {
     id: 2,
     tool: "v0",
+    mapLabel: "v0",
+    role: "实现界面和交互逻辑",
     icon: Palette,
     color: "#22D3EE",
     videoUrl: presentationVideos.demoV0,
@@ -77,6 +83,8 @@ const toolSections: ToolSection[] = [
   {
     id: 3,
     tool: "Supabase",
+    mapLabel: "Supabase",
+    role: "把用户数据存储在云端",
     icon: Database,
     color: "#A855F7",
     videoUrl: presentationVideos.demoSupabase,
@@ -86,6 +94,8 @@ const toolSections: ToolSection[] = [
   {
     id: 4,
     tool: "Cursor",
+    mapLabel: "Cursor",
+    role: "全栈开发，联调前后端代码",
     icon: Code2,
     color: "#22D3EE",
     videoUrl: presentationVideos.demoCursor,
@@ -99,6 +109,8 @@ const toolSections: ToolSection[] = [
   {
     id: 5,
     tool: "GitHub + Vercel",
+    mapLabel: "GitHub / Vercel",
+    role: "使代码可随时随地被访问",
     icon: Rocket,
     color: "#A855F7",
     videoUrl: presentationVideos.demoGithubVercel,
@@ -115,6 +127,77 @@ const toolSections: ToolSection[] = [
 // GitHub+Vercel: Step 28 (video only) = 1 step
 // Total: 12 + 9 + 1 + 5 + 1 = 28 steps
 export const DEMO_STEPS = 28
+
+function DemoStepMap({ activeIndex }: { activeIndex: number }) {
+  const activeTool = toolSections[activeIndex]
+  const ActiveIcon = activeTool.icon
+
+  return (
+    <div
+      className={cn(
+        "flex w-full flex-shrink-0 items-center gap-2 sm:gap-3",
+      )}
+    >
+      <div
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
+        style={{
+          background: `linear-gradient(135deg, ${activeTool.color}20, ${activeTool.color}05)`,
+          border: `1px solid ${activeTool.color}40`,
+        }}
+      >
+        <ActiveIcon className="h-5 w-5" style={{ color: activeTool.color }} />
+      </div>
+
+      <nav
+        aria-label="演示流程"
+        className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-1 gap-y-0.5"
+      >
+        {toolSections.map((item, index) => {
+          const isActive = index === activeIndex
+
+          return (
+            <Fragment key={item.id}>
+              {index > 0 && (
+                <span
+                  aria-hidden
+                  className="mx-0.5 select-none text-sm text-[#334155] sm:text-base"
+                >
+                  —
+                </span>
+              )}
+              <span
+                className={cn(
+                  "relative inline-flex items-baseline whitespace-nowrap transition-all duration-300",
+                  isActive
+                    ? "text-lg font-bold sm:text-xl md:text-2xl"
+                    : "text-sm font-medium text-[#64748B] sm:text-base md:text-lg"
+                )}
+                style={isActive ? { color: item.color } : undefined}
+                aria-current={isActive ? "step" : undefined}
+              >
+                <span>{item.mapLabel}</span>
+                <AnimatePresence mode="wait">
+                  {isActive && (
+                    <motion.span
+                      key={`${item.id}-role`}
+                      initial={{ opacity: 0, x: -4 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -4 }}
+                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                      className="ml-0.5 text-sm font-normal text-[#94A3B8] sm:ml-1 sm:text-base md:text-lg"
+                    >
+                      （{item.role}）
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </span>
+            </Fragment>
+          )
+        })}
+      </nav>
+    </div>
+  )
+}
 
 function VideoPlayer({ videoUrl, isSmall }: { videoUrl: string; isSmall?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -473,28 +556,12 @@ export function DemoSlide() {
           videoOnly ? "max-w-[min(100%,1920px)]" : "max-w-7xl"
         )}
       >
-        {/* Minimal tool badge */}
         <div
           className={cn(
-            "flex flex-shrink-0 items-center gap-2 sm:gap-3",
             videoOnly ? "mb-2" : isGeminiPrompt ? "mb-1.5 sm:mb-3" : "mb-4"
           )}
         >
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
-            style={{
-              background: `linear-gradient(135deg, ${activeTool.color}20, ${activeTool.color}05)`,
-              border: `1px solid ${activeTool.color}40`,
-            }}
-          >
-            <activeTool.icon className="w-5 h-5" style={{ color: activeTool.color }} />
-          </div>
-          <h3
-            className="text-lg font-bold sm:text-xl md:text-2xl"
-            style={{ color: activeTool.color }}
-          >
-            {activeTool.tool}
-          </h3>
+          <DemoStepMap activeIndex={state.toolIndex} />
         </div>
 
         {/* Main content area */}

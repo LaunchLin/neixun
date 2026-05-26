@@ -131,7 +131,7 @@ export function ThanksSlide() {
           <StepElement step={2} animation="fadeUp" duration={0.6} className="mt-10 w-full md:mt-12">
             <div className="mx-auto grid max-w-2xl grid-cols-2 gap-8 sm:gap-10 md:gap-14">
               <QRCard title="查看课件" qrSrc="/qr-course-materials.png" />
-              <QRCard title="提点意见" />
+              <QRCard title="提点意见" qrSrc="/qr-feedback.png" />
             </div>
           </StepElement>
         )}

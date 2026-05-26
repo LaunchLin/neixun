@@ -23,7 +23,7 @@ const SLIDE_CONFIGS = [
   { id: "meaning", totalSteps: 3 },      // Title + 2 cards
   { id: "showcase", totalSteps: 3 },     // 「字游」的可能性 + 2 videos
   { id: "methodology", totalSteps: 5 },  // Title + 4 panels (产品观，倒数第二页)
-  { id: "thanks", totalSteps: 1 },       // Thanks only
+  { id: "thanks", totalSteps: 2 },       // Thanks + QR codes
 ] as const
 
 function PresentationContent() {

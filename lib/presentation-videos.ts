@@ -2,8 +2,8 @@
  * 演示视频与扫码图：
  * - 视频文件名固定为下面这些（需要保持与 public/videos/ 同名）。
  * - 本地开发：直接从 `/videos/*.mp4` 加载。
- * - 正式分享：你可以上传 mp4 到公开的 CDN/对象存储，并设置 `NEXT_PUBLIC_VIDEOS_BASE_URL`
- *   为“视频目录”前缀（例如 `https://xxx.com/videos` 或 `https://storage.googleapis.com/<bucket>/videos`）。
+ * - 正式分享：上传 mp4 到阿里云 OSS 等对象存储，并设置 `NEXT_PUBLIC_VIDEOS_BASE_URL`
+ *   为“视频目录”前缀（例如 `https://your-bucket.oss-cn-hangzhou.aliyuncs.com/videos`）。
  */
 const VIDEOS_BASE_URL = process.env.NEXT_PUBLIC_VIDEOS_BASE_URL?.replace(/\/$/, "")
 

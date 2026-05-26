@@ -100,13 +100,18 @@ interface PresentationProviderProps {
   slideConfigs: readonly SlideConfig[]
 }
 
+/** 首页 step 0 为空白；step 1 才触发打字机，因此首页从 1 起步 */
+function initialStepForSlide(slideIndex: number) {
+  return slideIndex === 0 ? 1 : 0
+}
+
 export function PresentationProvider({ children, slideConfigs }: PresentationProviderProps) {
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [currentStep, setCurrentStep] = useState(0)
+  const [currentStep, setCurrentStep] = useState(() => initialStepForSlide(0))
   const totalSlides = slideConfigs.length
   
   // 使用 ref 存储最新状态，避免闭包问题
-  const stateRef = useRef({ slide: 0, step: 0 })
+  const stateRef = useRef({ slide: 0, step: initialStepForSlide(0) })
   const configsRef = useRef(slideConfigs)
   const isLocked = useRef(false)
   
@@ -150,7 +155,8 @@ export function PresentationProvider({ children, slideConfigs }: PresentationPro
     const configs = configsRef.current
     
     if (step > 0) {
-      const newStep = step - 1
+      let newStep = step - 1
+      if (slide === 0 && newStep < 1) newStep = 1
       stateRef.current.step = newStep
       setCurrentStep(newStep)
     } else if (slide > 0) {
@@ -166,16 +172,17 @@ export function PresentationProvider({ children, slideConfigs }: PresentationPro
   const goToSlide = useCallback((slideIndex: number) => {
     const configs = configsRef.current
     if (slideIndex >= 0 && slideIndex < configs.length) {
+      const step = initialStepForSlide(slideIndex)
       stateRef.current.slide = slideIndex
-      stateRef.current.step = 0
+      stateRef.current.step = step
       setCurrentSlide(slideIndex)
-      setCurrentStep(0)
+      setCurrentStep(step)
     }
   }, [])
 
   const isStepVisible = useCallback((step: number) => {
-    return stateRef.current.step >= step
-  }, [])
+    return currentStep >= step
+  }, [currentStep])
 
   // 全局事件监听
   useEffect(() => {

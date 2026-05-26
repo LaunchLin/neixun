@@ -132,27 +132,21 @@
     background-clip: text;
   }
   
-  .strikethrough-animation {
+  .hero-quote-line-struck {
     position: relative;
   }
-  
-  .strikethrough-animation::after {
-    content: '';
+
+  .hero-quote-line-struck::after {
+    content: "";
     position: absolute;
     left: 0;
+    right: 0;
     top: 50%;
-    width: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #22D3EE, #A855F7);
-    animation: strikethrough 1.5s ease-out 0.5s forwards;
+    height: 4px;
+    background: rgba(239, 68, 68, 0.7);
+    transform: translateY(-50%);
+    pointer-events: none;
   }
-  
-  @keyframes strikethrough {
-    to {
-      width: 100%;
-    }
-  }
-  
   .node-connection {
     position: relative;
   }
@@ -165,5 +159,47 @@
     width: 32px;
     height: 2px;
     background: linear-gradient(90deg, rgba(34, 211, 238, 0.5), rgba(168, 85, 247, 0.5));
+  }
+
+  .hero-char-being-eaten {
+    animation: hero-char-eaten 0.22s ease-in forwards;
+    display: inline-block;
+    transform-origin: center bottom;
+  }
+
+  .pixel-monster-idle {
+    animation: pixel-monster-bob 0.55s ease-in-out infinite;
+  }
+
+  .pixel-monster-chomp {
+    animation: pixel-monster-bite 0.22s ease-in-out;
+  }
+
+  @keyframes hero-char-eaten {
+    0% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      filter: brightness(1);
+    }
+    35% {
+      opacity: 1;
+      transform: scale(1.15) translateY(-2px);
+      filter: brightness(1.6) saturate(1.4);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.15) translateY(10px);
+      filter: brightness(0.5);
+    }
+  }
+
+  @keyframes pixel-monster-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
+
+  @keyframes pixel-monster-bite {
+    0%, 100% { transform: translateY(0) scale(1); }
+    45% { transform: translateY(3px) scale(1.08, 0.88); }
   }
 }
